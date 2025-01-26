@@ -382,7 +382,35 @@ CAutomobile* CCarCtrl::GenerateOneEmergencyServicesCar(uint32 modelId, CVector p
 
 // 0x430050
 void CCarCtrl::GenerateOneRandomCar() {
-    plugin::Call<0x430050>();
+    //DWORD a12 = 0xFFFF;
+    //BYTE  a13 = 0xFFFF;
+
+    auto var_105 = 0;
+    auto var_F5  = 0;
+    auto var_106 = 0;
+
+    auto playerPos   = FindPlayerCentreOfWorld(CWorld::PlayerInFocus);
+    auto playerSpeed = FindPlayerSpeed();
+
+    auto var_12C = NumRandomCars + NumFireTrucksOnDuty + NumAmbulancesOnDuty + NumMissionCars + NumLawEnforcerCars + CarDensityMultiplier;
+    // a5
+    auto numEnforcersCars = NumLawEnforcerCars;
+
+    if (!CCullZones::FewerCars()) {
+        //CarDensityMultiplier *= 0.60000002;
+        CarDensityMultiplier *= 0.6f;
+    }
+
+    /*
+    * fild    [esp+13Ch+var_12C] ; Load Integer
+    * fstp    [esp+13Ch+var_E8] ; Store Real and Pop
+    */
+    auto var_E8 = static_cast<double>(var_12C);
+
+    CPopulation::FindCarMultiplierMotorway();
+
+    var_E8 *= MaxNumberOfCarsInUse;
+    var_E8 *= CarDensityMultiplier;
 }
 
 // 0x4341C0
