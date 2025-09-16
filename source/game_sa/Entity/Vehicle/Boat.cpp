@@ -84,8 +84,8 @@ CBoat::CBoat(int32 modelIndex, eVehicleCreatedBy createdBy) : CVehicle(createdBy
     m_nBoatFlags.bOnWater = true;
 
     m_fSteerAngle = 0.0f;
-    m_fGasPedal = 0.0f;
-    m_fBreakPedal = 0.0f;
+    m_GasPedal = 0.0f;
+    m_BrakePedal = 0.0f;
     m_fRawSteerAngle = 0.0f;
     field_63C = 0;
     m_fLastWaterImmersionDepth = 7.0F;
@@ -98,15 +98,15 @@ CBoat::CBoat(int32 modelIndex, eVehicleCreatedBy createdBy) : CVehicle(createdBy
     memset(m_afWakePointLifeTime, 0, sizeof(m_afWakePointLifeTime));
 
     m_nAmmoInClip = 20;
-    m_boatFlap.m_nAxis = AXIS_Y;
+    m_boatFlap.m_axis = AXIS_Y;
     if (m_nModelIndex == MODEL_MARQUIS) {
-        m_boatFlap.m_fOpenAngle = PI / 10.0F;
-        m_boatFlap.m_fClosedAngle = -PI / 10.0F;
-        m_boatFlap.m_nDirn = 4;
+        m_boatFlap.m_openAngle = PI / 10.0F;
+        m_boatFlap.m_closedAngle = -PI / 10.0F;
+        m_boatFlap.m_dirn = 4;
     } else {
-        m_boatFlap.m_fOpenAngle = TWO_PI / 10.0F;
-        m_boatFlap.m_fClosedAngle = -TWO_PI / 10.0F;
-        m_boatFlap.m_nDirn = 3;
+        m_boatFlap.m_openAngle = TWO_PI / 10.0F;
+        m_boatFlap.m_closedAngle = -TWO_PI / 10.0F;
+        m_boatFlap.m_dirn = 3;
     }
 
     m_vehicleAudio.Initialise(this);
@@ -411,12 +411,11 @@ void CBoat::FillBoatList() {
     vecCamDir.Normalise();
 
     auto iCurBoat = 0u;
-    for (int32 iInd = 0; iInd < GetVehiclePool()->GetSize(); ++iInd) {
-        auto vehicle = GetVehiclePool()->GetAt(iInd);
-        if (!vehicle || !vehicle->IsBoat())
+    for (auto& vehicle : GetVehiclePool()->GetAllValid()) {
+        if (!vehicle.IsBoat())
             continue;
 
-        auto boat = vehicle->AsBoat();
+        auto boat = vehicle.AsBoat();
         if (!boat->m_nNumWaterTrailPoints)
             continue;
 
@@ -469,7 +468,7 @@ void CBoat::ProcessControl() {
     PruneWakeTrail();
     CVehicle::ProcessDelayedExplosion();
     auto fMassCheck = (m_fMass * 0.008F * 100.0F) / 125.0F;
-    if (physicalFlags.bDestroyed && fMassCheck < m_fBuoyancyConstant)
+    if (physicalFlags.bRenderScorched && fMassCheck < m_fBuoyancyConstant)
         m_fBuoyancyConstant -= ((m_fMass * 0.001F) * 0.008F);
 
     auto wanted = FindPlayerWanted();
@@ -477,7 +476,7 @@ void CBoat::ProcessControl() {
         auto vehicle = FindPlayerVehicle();
         if (vehicle && vehicle->GetVehicleAppearance() == eVehicleAppearance::VEHICLE_APPEARANCE_BOAT) {
             auto iCarMission = m_autoPilot.m_nCarMission;
-            if (iCarMission == eCarMission::MISSION_ATTACKPLAYER ||
+            if (iCarMission == eCarMission::MISSION_BOAT_ATTACKPLAYER ||
                 (iCarMission >= eCarMission::MISSION_RAMPLAYER_FARAWAY && iCarMission <= eCarMission::MISSION_BLOCKPLAYER_CLOSE)
             ) {
                 if (CTimer::GetTimeInMS() > m_nAttackPlayerTime) {
@@ -525,8 +524,8 @@ void CBoat::ProcessControl() {
         m_nBoatFlags.bMovingOnWater = true;
 
         m_fSteerAngle = 0.0F;
-        m_fBreakPedal = 0.5F;
-        m_fGasPedal = 0.0F;
+        m_BrakePedal = 0.5F;
+        m_GasPedal = 0.0F;
 
         auto fDist = (GetPosition() - FindPlayerCentreOfWorld_NoSniperShift(0)).Magnitude();
         if (fDist > 150.0F) {
@@ -542,16 +541,16 @@ void CBoat::ProcessControl() {
         auto fROCPropSpeed = CPlane::PLANE_ROC_PROP_SPEED;
         if (m_nModelIndex == MODEL_SKIMMER)
             fSTDPropSpeed = CPlane::PLANE_STD_PROP_SPEED;
-        else if (m_fGasPedal != 0.0F)
+        else if (m_GasPedal != 0.0F)
             fROCPropSpeed *= 5.0F;
 
-        if (m_fGasPedal == 0.0F)
+        if (m_GasPedal == 0.0F)
             m_fPropSpeed += (fSTDPropSpeed - m_fPropSpeed) * CTimer::GetTimeStep() * fROCPropSpeed;
-        else if (m_fGasPedal < 0.0F) {
-            fSTDPropSpeed = (CPlane::PLANE_STD_PROP_SPEED - 0.05F) * m_fGasPedal + CPlane::PLANE_STD_PROP_SPEED;
+        else if (m_GasPedal < 0.0F) {
+            fSTDPropSpeed = (CPlane::PLANE_STD_PROP_SPEED - 0.05F) * m_GasPedal + CPlane::PLANE_STD_PROP_SPEED;
             m_fPropSpeed += (fSTDPropSpeed - m_fPropSpeed) * CTimer::GetTimeStep() * fROCPropSpeed;
         } else {
-            fSTDPropSpeed = (CPlane::PLANE_MAX_PROP_SPEED - CPlane::PLANE_STD_PROP_SPEED) * m_fGasPedal + CPlane::PLANE_STD_PROP_SPEED;
+            fSTDPropSpeed = (CPlane::PLANE_MAX_PROP_SPEED - CPlane::PLANE_STD_PROP_SPEED) * m_GasPedal + CPlane::PLANE_STD_PROP_SPEED;
             m_fPropSpeed += (fSTDPropSpeed - m_fPropSpeed) * CTimer::GetTimeStep() * fROCPropSpeed;
         }
     } else if (m_fPropSpeed > 0.0F) {
@@ -695,12 +694,12 @@ void CBoat::PreRender() {
 
             m_boatFlap.Process(this, m_vecBoatMoveForce, m_vecBoatTurnForce, vecTransformed);
             CVector vecAxis;
-            if (m_boatFlap.m_nAxis == AXIS_X)
-                vecAxis.Set(m_boatFlap.m_fAngle, 0.0F, 0.0F);
-            else if (m_boatFlap.m_nAxis == AXIS_Y)
-                vecAxis.Set(0.0F, m_boatFlap.m_fAngle, 0.0F);
-            else if (m_boatFlap.m_nAxis == AXIS_Z)
-                vecAxis.Set(0.0F, 0.0F, m_boatFlap.m_fAngle);
+            if (m_boatFlap.m_axis == AXIS_X)
+                vecAxis.Set(m_boatFlap.m_angle, 0.0F, 0.0F);
+            else if (m_boatFlap.m_axis == AXIS_Y)
+                vecAxis.Set(0.0F, m_boatFlap.m_angle, 0.0F);
+            else if (m_boatFlap.m_axis == AXIS_Z)
+                vecAxis.Set(0.0F, 0.0F, m_boatFlap.m_angle);
 
             tempMat.SetRotate(vecAxis.x, vecAxis.y, vecAxis.z);
             tempMat.GetPosition() += posCopy;
@@ -912,28 +911,28 @@ void CBoat::ProcessControlInputs(uint8 ucPadNum) {
         m_nPadNumber = 3;
 
     auto pad = CPad::GetPad(ucPadNum);
-    float fBrakePower = (static_cast<float>(pad->GetBrake()) * (1.0F / 255.0F) - m_fBreakPedal) * 0.1F + m_fBreakPedal;
+    float fBrakePower = (static_cast<float>(pad->GetBrake()) * (1.0F / 255.0F) - m_BrakePedal) * 0.1F + m_BrakePedal;
     fBrakePower = std::clamp(fBrakePower, 0.0F, 1.0F);
-    m_fBreakPedal = fBrakePower;
+    m_BrakePedal = fBrakePower;
 
     auto fGasPower = fBrakePower * -0.3F;
     if (fBrakePower < 0.05F) {
-        m_fBreakPedal = 0.0F;
+        m_BrakePedal = 0.0F;
         fGasPower = static_cast<float>(pad->GetAccelerate()) * (1.0F / 255.0F);
     }
-    m_fGasPedal = fGasPower;
+    m_GasPedal = fGasPower;
 
     // Mouse steering
     // TODO: Try copy paste code from `CAutomobile::ProcessControlInputs` for this...
     if (CCamera::m_bUseMouse3rdPerson && CVehicle::m_bEnableMouseSteering) {
-        auto bChangedInput = CVehicle::m_nLastControlInput != eControllerType::CONTROLLER_MOUSE || pad->GetSteeringLeftRight();
-        if (CPad::NewMouseControllerState.X == 0.0F && bChangedInput) { // No longer using mouse controls
+        auto bChangedInput = CVehicle::m_nLastControlInput != eControllerType::MOUSE || pad->GetSteeringLeftRight();
+        if (CPad::NewMouseControllerState.m_AmountMoved.x == 0.0F && bChangedInput) { // No longer using mouse controls
             m_fRawSteerAngle += (static_cast<float>(-pad->GetSteeringLeftRight()) * (1.0F / 128.0F) - m_fRawSteerAngle) * 0.2F * CTimer::GetTimeStep();
-            CVehicle::m_nLastControlInput = eControllerType::CONTROLLER_KEYBOARD1;
+            CVehicle::m_nLastControlInput = eControllerType::KEYBOARD;
         } else if (m_fRawSteerAngle != 0.0F || m_fRawSteerAngle != 0.0F) { // todo: doesn't match OG and duplicateExpression: Same expression on both sides of '||'.
-            CVehicle::m_nLastControlInput = eControllerType::CONTROLLER_MOUSE;
+            CVehicle::m_nLastControlInput = eControllerType::MOUSE;
             if (!pad->NewState.m_bVehicleMouseLook) {
-                m_fRawSteerAngle += CPad::NewMouseControllerState.X * -0.0035F;
+                m_fRawSteerAngle += CPad::NewMouseControllerState.m_AmountMoved.x * -0.0035F;
             }
 
             if (std::fabs(m_fRawSteerAngle) < 0.5f || pad->NewState.m_bVehicleMouseLook) {
@@ -942,7 +941,7 @@ void CBoat::ProcessControlInputs(uint8 ucPadNum) {
         }
     } else {
         m_fRawSteerAngle += (static_cast<float>(-pad->GetSteeringLeftRight()) * (1.0F / 128.0F) - m_fRawSteerAngle) * 0.2F * CTimer::GetTimeStep();
-        CVehicle::m_nLastControlInput = eControllerType::CONTROLLER_KEYBOARD1;
+        CVehicle::m_nLastControlInput = eControllerType::KEYBOARD;
     }
 
     m_fRawSteerAngle = std::clamp(m_fRawSteerAngle, -1.0F, 1.0F);
@@ -964,7 +963,7 @@ void CBoat::BlowUpCar(CEntity* damager, bool bHideExplosion) {
     if (!vehicleFlags.bCanBeDamaged)
         return;
 
-    physicalFlags.bDestroyed = true;
+    physicalFlags.bRenderScorched = true;
     m_nStatus = eEntityStatus::STATUS_WRECKED;
     CVisibilityPlugins::SetClumpForAllAtomicsFlag(m_pRwClump, eAtomicComponentFlag::ATOMIC_IS_BLOWN_UP);
     m_vecMoveSpeed.z += 0.13F;

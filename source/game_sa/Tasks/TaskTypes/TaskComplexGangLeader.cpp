@@ -211,7 +211,7 @@ CTask* CTaskComplexGangLeader::ControlSubTask(CPed* ped) {
     }
 
     // If we're wandering and the wander time is out of time...
-    if (const auto tWander = CTask::DynCast<CTaskComplexWander>(m_pSubTask)) { // 0x66241F
+    if (const auto tWander = notsa::dyn_cast_if_present<CTaskComplexWander>(m_pSubTask)) { // 0x66241F
         if (m_wanderTimer.IsOutOfTime()) {
             if (tWander->GetDistSqOfClosestPathNodeToPed(ped) <= 2.f) {
                 m_gang->GetIntelligence().SetDefaultTaskAllocatorType(ePedGroupDefaultTaskAllocatorType::RANDOM);
@@ -467,7 +467,7 @@ void CTaskComplexGangLeader::ScanForStuff(CPed* ped) {
                 m_gang->GetMembership().AddFollower(&scannedPed);
             }
 
-            // Find a member close enough to the scanned ped, and make the partners
+            // Find a member close enough to the scanned ped, and make them partners
             if (const auto [closestMem, distSq] = m_gang->GetMembership().GetMemberClosestTo(&scannedPed); // 0x65E61F
                 closestMem && sq(10.f) >= distSq && distSq >= sq(4.f)
             ) {           

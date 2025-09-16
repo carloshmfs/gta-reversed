@@ -66,13 +66,16 @@ bool CAEAudioUtility::ResolveProbability(float p) {
 }
 
 // 0x4d9d90
-float CAEAudioUtility::GetPiecewiseLinear(float x, int16 dataCount, float (*data)[2]) {
-    if (x >= data[dataCount - 1][0])
+float CAEAudioUtility::GetPiecewiseLinear(float x, int16 dataCount, const float (*data)[2]) {
+    assert(dataCount >= 1);
+    if (x >= data[dataCount - 1][0]) {
         return data[dataCount - 1][1];
-
-    if (x <= data[0][0])
+    }
+    if (x <= data[0][0]) {
         return data[0][1];
+    }
 
+    assert(dataCount >= 2);
     int32 i = 0;
     for (; i < dataCount; i++) {
         if (data[i][0] >= x)
@@ -101,12 +104,12 @@ uint64 CAEAudioUtility::GetCurrentTimeInMS() {
     //For some reason this doesn't work (original code):
     //LARGE_INTEGER counter;
     //QueryPerformanceCounter(&counter);
-    //return counter.QuadPart / Frequency.QuadPart * 1000 - startTimeMs;
+    //return counter.QuadPart / SampleFrequency.QuadPart * 1000 - startTimeMs;
 }
 
 // 0x4d9ef0
-uint32 CAEAudioUtility::ConvertFromBytesToMS(uint32 lengthInBytes, uint32 frequency, uint16 frequencyMult) {
-    return static_cast<uint32>(std::floorf(lengthInBytes / (float(frequency * frequencyMult) / 500.0f)));
+uint32 CAEAudioUtility::ConvertFromBytesToMS(uint32 lengthInBytes, uint32 sampleRate, uint16 numChannels) {
+    return static_cast<uint32>(std::floorf(lengthInBytes / (float(sampleRate * numChannels) / 500.0f)));
 }
 
 // 0x4d9f40
