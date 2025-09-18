@@ -406,7 +406,7 @@ void CCarCtrl::GenerateOneRandomCar() {
     int              v22;        // ebx
     CPathNode*       v23;        // edx
     unsigned __int8  v24;        // al
-    int              v25;        // eax
+    eModelID         v25;        // eax
     CPathNode*       v26;        // esi
     __int16          v27;        // di
     int              v28;        // ebp
@@ -415,13 +415,13 @@ void CCarCtrl::GenerateOneRandomCar() {
     CNodeAddress**   v31;        // eax
     CCarPathLink*    v32;        // esi
     __int16          v33;        // ax
-    int              v34;        // edi
+    int32            v34;        // edi
     bool             v35;        // zf
     int              v36;        // eax
-    unsigned __int8* v37;        // eax
+    CVehicle*        v37;        // eax
     int              v38;        // ebp
     int              v39;        // ecx
-    unsigned __int8* v40;        // esi
+    CVehicle* generatedVehicle;        // esi
     float            v41;        // eax
     double           v42;        // st7
     __int16          v43;        // cx
@@ -600,7 +600,7 @@ void CCarCtrl::GenerateOneRandomCar() {
     signed int       generateCarArg4;         // [esp+40h] [ebp-11Ch]
     float            a7a;        // [esp+40h] [ebp-11Ch]
     float            generateCarArg3;       // [esp+44h] [ebp-118h]
-    int32            vehicleModel; // [esp+48h] [ebp-114h]
+    eModelID         vehicleModel; // [esp+48h] [ebp-114h]
     float            generateCarArg5;         // [esp+4Ch] [ebp-110h]
     float            pLevel;     // [esp+50h] [ebp-10Ch]
     char             v222;       // [esp+56h] [ebp-106h]
@@ -807,10 +807,10 @@ LABEL_39:
             } else {
                 v215 = 1;
                 if (v10 == 13) {
-                    vehicleModel = 430;
+                    vehicleModel = eModelID::MODEL_PREDATOR;
                     modelArg1       = 24;
                     if (unk_8E6E68 != 1) {
-                        CStreaming::RequestModel(430, 8);
+                        CStreaming::RequestModel(eModelID::MODEL_PREDATOR, 8);
                         return;
                     }
                 } else {
@@ -862,38 +862,52 @@ LABEL_39:
                         v222 = 1;
                     }
                 }
+
+                /*
+                * 17 =
+                * 467 = m_vehicleAudio.m
+                * 949 = m_autoPilot._smthCurr
+                * 950 = m_autoPilot._smthNext
+                * 951 = m_autoPilot.m_nCurrentLane
+                * 952 = m_autoPilot.m_nNextLane
+                * 953 = m_autoPilot.m_nCarDrivingStyle
+                * 954 = m_autoPilot.m_nCarMission
+                * 955 = m_autoPilot.m_nTempAction
+                * 976 = m_autoPilot.m_nCruiseSpeed
+                */
+
                 v37          = CCarCtrl::GetNewVehicleDependingOnCarModel(v34, 1);
                 v38          = modelArg1;
                 v39          = *carGenerationNodeAddr2;
-                v40          = v37;
+                generatedVehicle = v37;
                 v41          = carGenerationNodeAddr1;
                 v35          = modelArg1 == 13;
-                *(v40 + 460) = -1;
-                *(v40 + 228) = v41;
-                *(v40 + 229) = v39;
+                generatedVehicle->m_vehicleAudio.m_AuSettings.HornPitch = -1;
+                generatedVehicle->m_vecLastCollisionImpactVelocity.y = v41;
+                *(generatedVehicle + 229) = v39;
                 if (v35) {
-                    v40[955] = 0;
+                    generatedVehicle->m_autoPilot.m_nTempAction = eAutoPilotTempAction::TEMPACT_NONE;
                     if (FindPlayerWanted(-1)->m_nWantedLevel) {
-                        v40[976] = CCarAI::FindPoliceCarSpeedForWantedLevel(v40);
-                        if (CVehicle::GetVehicleAppearance(v40) == 2) {
+                        generatedVehicle->m_autoPilot.m_nCruiseSpeed = CCarAI::FindPoliceCarSpeedForWantedLevel(generatedVehicle);
+                        if (CVehicle::GetVehicleAppearance(generatedVehicle) == 2) {
                             v46 = CCarAI::FindPoliceBikeMissionForWantedLevel(v204);
                         } else {
                             v46 = CCarAI::FindPoliceCarMissionForWantedLevel(v204);
                         }
-                        v40[954] = v46;
-                        v40[953] = 2;
+                        generatedVehicle->m_autoPilot.m_nCarMission = v46;
+                        generatedVehicle->m_autoPilot.m_nCarDrivingStyle = eCarDrivingStyle::DRIVING_STYLE_AVOID_CARS;
                     } else {
-                        v40[976] = CGeneral::GetRandomNumberInRange(18.0, 24.0);
-                        v40[953] = 0;
-                        v40[954] = 1;
+                        generatedVehicle->m_autoPilot.m_nCruiseSpeed = CGeneral::GetRandomNumberInRange(18.0, 24.0);
+                        generatedVehicle->m_autoPilot.m_nCarDrivingStyle = eCarDrivingStyle::DRIVING_STYLE_STOP_FOR_CARS;
+                        generatedVehicle->m_autoPilot.m_nCarMission = eCarMission::MISSION_CRUISE;
                     }
-                    if (v34 == 490) {
-                        v40[1'076] = 0;
-                        v40[1'077] = 0;
+                    if (v34 == eModelID::MODEL_FBIRANCH) {
+                        generatedVehicle->m_nPrimaryColor = 0;
+                        generatedVehicle->m_nSecondaryColor = 0;
                     }
                 } else {
                     if (v38 != 24) {
-                        v40[976] = CGeneral::GetRandomNumberInRange(13.0, 21.0);
+                        generatedVehicle->m_autoPilot.m_nCruiseSpeed = CGeneral::GetRandomNumberInRange(13.0, 21.0);
                         if (v38 == 3) {
                             v42 = CGeneral::GetRandomNumberInRange(18.0, 27.0);
                         } else {
@@ -902,36 +916,36 @@ LABEL_39:
                             }
                             v42 = CGeneral::GetRandomNumberInRange(10.0, 15.0);
                         }
-                        v40[976] = v42;
+                        generatedVehicle->m_autoPilot.m_nCruiseSpeed = v42;
 LABEL_81:
-                        v43 = *(v40 + 17);
+                        v43 = *(generatedVehicle + 17); // generatedVehicle->m_placement.m_fHeading ?? 
                         v44 = CModelInfo::ms_modelInfoPtrs[v43]->clump.base.m_pColModel;
                         if (v44->m_Box.max.y - v44->m_Box.min.y > 10.0 || v38 == 5) {
-                            v40[976] = 3 * v40[976] / 4;
+                            generatedVehicle->m_autoPilot.m_nCruiseSpeed = 3 * generatedVehicle->m_autoPilot.m_nCruiseSpeed / 4;
                         }
                         if (v215) {
-                            if (v43 == 446 || v43 == 452 || v43 == 493) {
+                            if (v43 == eModelID::MODEL_SQUALO || v43 == eModelID::MODEL_SPEEDER || v43 == eModelID::MODEL_JETMAX) {
                                 v45 = CGeneral::GetRandomNumberInRange(25.0, 35.0);
                             } else {
                                 v45 = CGeneral::GetRandomNumberInRange(15.0, 24.0);
                             }
-                            v40[976] = v45;
+                            generatedVehicle->m_autoPilot.m_nCruiseSpeed = v45;
                         }
-                        v40[954] = 1;
-                        v40[955] = 0;
-                        v40[953] = 0;
+                        generatedVehicle->m_autoPilot.m_nCarMission      = eCarMission::MISSION_CRUISE;
+                        generatedVehicle->m_autoPilot.m_nTempAction      = eAutoPilotTempAction::TEMPACT_NONE;
+                        generatedVehicle->m_autoPilot.m_nCarDrivingStyle = eCarDrivingStyle::DRIVING_STYLE_STOP_FOR_CARS;
 LABEL_102:
-                        if (*(v40 + 17) == 423) {
-                            v40[1'069] |= 0x80u;
+                        if (*(generatedVehicle + 17) == 423) {
+                            generatedVehicle->vehicleFlags; |= 0x80u; // TODO: offset: 1069
                         }
-                        *(v40 + 467) = v207;
+                        generatedVehicle->m_vehicleAudio.m_AuSettings.RadioType = v207;
                         v47          = rand() % a5c;
-                        v40[951]     = v47;
-                        v40[952]     = v47;
+                        generatedVehicle->m_autoPilot.m_nCurrentLane = v47;
+                        generatedVehicle->m_autoPilot.m_nNextLane    = v47;
                         if (CGameLogic::LaRiotsActiveHere()) {
                             v48 = 80;
                         } else {
-                            v49 = CVehicle::GetVehicleAppearance(v40) - 2;
+                            v49 = CVehicle::GetVehicleAppearance(generatedVehicle) - 2;
                             if (v49) {
                                 if (v49 == 2) {
                                     v48 = 10;
@@ -949,7 +963,7 @@ LABEL_102:
                             v225 = 1;
                             generateCarArg3 = 1.0;
                         }
-                        v50  = CModelInfo::ms_modelInfoPtrs[*(v40 + 17)]->clump.base.m_pColModel;
+                        v50  = CModelInfo::ms_modelInfoPtrs[*(generatedVehicle + 17)]->clump.base.m_pColModel;
                         v51  = &ThePaths.m_pPathNodes[v22][v235 / 0x1C];
                         a5d  = (v50->m_Box.max.y - v50->m_Box.min.y) * 0.5 + 1.0;
                         v52  = CPathNode::GetNodeCoors(v51, &pPosition);
@@ -977,9 +991,9 @@ LABEL_102:
                             generateCarArg3 = 0.5;
                         }
                         if (sub_420980(carGenerationNodeAddr2)) {
-                            v40[950] = -1;
+                            generatedVehicle->m_autoPilot._smthNext = -1;
                         } else {
-                            v40[950] = 1;
+                            generatedVehicle->m_autoPilot._smthNext = 1;
                         }
                         v62 = &ThePaths.m_pPathNodes[v22][v235 / 0x1C];
                         if ((v62->m_dwFlags[0] & 0xF) == 1) {
@@ -992,17 +1006,17 @@ LABEL_102:
                             v66 = ThePaths.m_pPathNodes[v22];
                             v62 = &v66[v235 / 0x1C];
                             v67 = *(ThePaths.pNaviLinks[v22] + v65 + v66[v235 / 0x1C].m_wConnectedNodesStartId);
-                        } while (v67 == *(v40 + 467));
-                        *(v40 + 466) = v67;
+                        } while (v67 == *(generatedVehicle + 467));
+                        *(generatedVehicle + 466) = v67;
                         if (!ThePaths.m_pPathNodes[v67 >> 10]) {
                             goto LABEL_189;
                         }
                         v68 = *(&ThePaths.m_pPathNodes[v22]->m_wConnectedNodesStartId + v64);
                         v69 = ThePaths.m_pNodeLinks[v22];
                         if (sub_420980(&carGenerationNodeAddr1)) {
-                            v40[949] = -1;
+                            generatedVehicle->m_autoPilot._smthCurr = -1;
                         } else {
-                            v40[949] = 1;
+                            generatedVehicle->m_autoPilot._smthCurr = 1;
                         }
                         v70        = (ThePaths.m_pPathNodes[*carGenerationNodeAddr2] + LODWORD(v229));
                         a6         = CPathNode::GetNodeCoors((ThePaths.m_pPathNodes[v22] + v64), &outVec);
@@ -1025,33 +1039,33 @@ LABEL_102:
                         }
                         CVector::Normalise(&v243);
                         v77                = -v.x;
-                        *(*(v40 + 5) + 16) = v243;
-                        *(*(v40 + 5) + 20) = v244;
-                        *(*(v40 + 5) + 24) = v245;
-                        **(v40 + 5)        = LODWORD(v.y);
-                        *(*(v40 + 5) + 4)  = v77;
-                        *(*(v40 + 5) + 8)  = 0;
-                        *(*(v40 + 5) + 32) = 0;
-                        *(*(v40 + 5) + 36) = 0;
-                        *(*(v40 + 5) + 40) = 1'065'353'216;
-                        v78                = *(v40 + 228);
-                        v79                = *(v40 + 467);
-                        v80                = CPathNode::GetNodeCoors(&ThePaths.m_pPathNodes[v78][*(v40 + 228) >> 16], &outVec);
+                        *(*(generatedVehicle + 5) + 16) = v243;
+                        *(*(generatedVehicle + 5) + 20) = v244;
+                        *(*(generatedVehicle + 5) + 24) = v245;
+                        **(generatedVehicle + 5)        = LODWORD(v.y);
+                        *(*(generatedVehicle + 5) + 4)  = v77;
+                        *(*(generatedVehicle + 5) + 8)  = 0;
+                        *(*(generatedVehicle + 5) + 32) = 0;
+                        *(*(generatedVehicle + 5) + 36) = 0;
+                        *(*(generatedVehicle + 5) + 40) = 1'065'353'216;
+                        v78                = *(generatedVehicle + 228);
+                        v79                = *(generatedVehicle + 467);
+                        v80                = CPathNode::GetNodeCoors(&ThePaths.m_pPathNodes[v78][*(generatedVehicle + 228) >> 16], &outVec);
                         v81                = CCompressedVector::to3dVector(&ThePaths.pNaviNodes[v79 >> 10][v79 & 0x3FF], &a2);
                         v82                = vectorSub(&out, v81, v80);
-                        v83                = &ThePaths.m_pPathNodes[*(v40 + 229)][*(v40 + 229) >> 16];
+                        v83                = &ThePaths.m_pPathNodes[*(generatedVehicle + 229)][*(generatedVehicle + 229) >> 16];
                         *&vehicleModel       = sqrt(v82->x * v82->x + v82->y * v82->y);
                         v84                = CPathNode::GetNodeCoors(v83, &outVec);
                         v85                = CCompressedVector::to3dVector(&ThePaths.pNaviNodes[v79 >> 10][v79 & 0x3FF], &v249);
                         v86                = vectorSub(&pPosition, v85, v84);
                         if (*&vehicleModel / (sqrt(v86->x * v86->x + v86->y * v86->y) + *&vehicleModel) <= generateCarArg3) {
-                            CCarCtrl::PickNextNodeRandomly(v40);
-                            v96        = *(v40 + 228);
-                            v79        = *(v40 + 467);
-                            v97        = CPathNode::GetNodeCoors(&ThePaths.m_pPathNodes[v96][*(v40 + 228) >> 16], &outVec);
+                            CCarCtrl::PickNextNodeRandomly(generatedVehicle);
+                            v96        = *(generatedVehicle + 228);
+                            v79        = *(generatedVehicle + 467);
+                            v97        = CPathNode::GetNodeCoors(&ThePaths.m_pPathNodes[v96][*(generatedVehicle + 228) >> 16], &outVec);
                             v98        = CCompressedVector::to3dVector(&ThePaths.pNaviNodes[v79 >> 10][v79 & 0x3FF], &a2);
                             *&v99      = COERCE_FLOAT(vectorSub(&out, v98, v97));
-                            v87        = *(v40 + 466);
+                            v87        = *(generatedVehicle + 466);
                             v228       = *&v99;
                             v100       = CPathNode::GetNodeCoors(&ThePaths.m_pPathNodes[v96][v96 >> 16], &v249);
                             v101       = CCompressedVector::to3dVector(&ThePaths.pNaviNodes[v87 >> 10][v87 & 0x3FF], &pPosition);
@@ -1066,7 +1080,7 @@ LABEL_102:
                             v94        = v103 - sqrt(v107 * v107 + v106 * v106);
                             v95        = sqrt(*&vehicleModel * *&vehicleModel + v108 * v108) + v103;
                         } else {
-                            v87 = *(v40 + 466);
+                            v87 = *(generatedVehicle + 466);
                             v88 = CPathNode::GetNodeCoors(&ThePaths.m_pPathNodes[v78][v78 >> 16], &outVec);
                             v89 = CCompressedVector::to3dVector(&ThePaths.pNaviNodes[v87 >> 10][v87 & 0x3FF], &a2);
                             v90 = vectorSub(&out, v89, v88);
@@ -1082,8 +1096,8 @@ LABEL_102:
                         } else if (a7a > 1.0) {
                             a7a = 1.0;
                         }
-                        v109         = v40[949];
-                        v110         = v40[950];
+                        v109         = generatedVehicle[949];
+                        v110         = generatedVehicle[950];
                         v111         = ThePaths.pNaviNodes[v87 >> 10][v87 & 0x3FF].dirY;
                         v234         = ThePaths.pNaviNodes[v87 >> 10][v87 & 0x3FF].dirX * 0.0099999998 * v109;
                         v112         = ThePaths.pNaviNodes[v79 >> 10][v79 & 0x3FF].dirX;
@@ -1094,21 +1108,21 @@ LABEL_102:
                         v115         = &ThePaths.pNaviNodes[v87 >> 10][v87 & 0x3FF];
                         v231         = v114 * 0.0099999998 * v113;
                         v116         = CCarPathLink::OneWayLaneOffset(v115);
-                        v117         = &ThePaths.pNaviNodes[*(v40 + 467) >> 10][*(v40 + 467) & 0x3FF];
-                        *&vehicleModel = (v116 + v40[951]) * 5.4000001;
-                        a5e          = (CCarPathLink::OneWayLaneOffset(v117) + v40[952]) * 5.4000001;
-                        if (*(v40 + 357) == 10) {
+                        v117         = &ThePaths.pNaviNodes[*(generatedVehicle + 467) >> 10][*(generatedVehicle + 467) & 0x3FF];
+                        *&vehicleModel = (v116 + generatedVehicle[951]) * 5.4000001;
+                        a5e          = (CCarPathLink::OneWayLaneOffset(v117) + generatedVehicle[952]) * 5.4000001;
+                        if (*(generatedVehicle + 357) == 10) {
                             *&vehicleModel = *&vehicleModel + 1.4580001;
                             a5e          = a5e + 1.4580001;
                         }
-                        v118         = ((ThePaths.m_pPathNodes[*(v40 + 229)][*(v40 + 229) >> 16].m_dwFlags[1] >> 4) & 3);
-                        v40[977]     = v118;
+                        v118         = ((ThePaths.m_pPathNodes[*(generatedVehicle + 229)][*(generatedVehicle + 229) >> 16].m_dwFlags[1] >> 4) & 3);
+                        generatedVehicle[977]     = v118;
                         v119         = CCarCtrl::FindSpeedMultiplierWithSpeedFromNodes(v118, v204);
-                        *(v40 + 245) = v119;
-                        v120         = *(v40 + 467);
-                        *(v40 + 242) = v40[976] * v119;
+                        *(generatedVehicle + 245) = v119;
+                        v120         = *(generatedVehicle + 467);
+                        *(generatedVehicle + 242) = generatedVehicle[976] * v119;
                         v228         = a5e * v241;
-                        v121         = *(v40 + 466);
+                        v121         = *(generatedVehicle + 466);
                         v122         = ThePaths.pNaviNodes[v120 >> 10][v120 & 0x3FF].y * 0.125;
                         v123         = ThePaths.pNaviNodes[v120 >> 10][v120 & 0x3FF].x;
                         v124         = a5e * v231;
@@ -1120,9 +1134,9 @@ LABEL_102:
                         v127         = v125[v121 & 0x3FF].y * 0.125;
                         v128         = ThePaths.pNaviNodes[v121 >> 10][v121 & 0x3FF].x;
                         *&vehicleModel = *&vehicleModel * v232;
-                        v129         = v40[949];
+                        v129         = generatedVehicle[949];
                         v130         = v128 * 0.125;
-                        v131         = v40[950];
+                        v131         = generatedVehicle[950];
                         a1.z         = 0.0;
                         a1.x         = v130 + *&vehicleModel;
                         a1.y         = v127 - v126;
@@ -1132,22 +1146,22 @@ LABEL_102:
                         a            = ThePaths.pNaviNodes[v120 >> 10][v120 & 0x3FF].dirX * 0.0099999998 * v132;
                         a4           = ThePaths.pNaviNodes[v121 >> 10][v121 & 0x3FF].dirY * 0.0099999998 * v133;
                         a3           = ThePaths.pNaviNodes[v121 >> 10][v121 & 0x3FF].dirX * 0.0099999998 * v133;
-                        v138         = (CCurves::CalcSpeedScaleFactor(&a1, &v, a3, a4, a, v134) * (1000.0 / *(v40 + 242)));
+                        v138         = (CCurves::CalcSpeedScaleFactor(&a1, &v, a3, a4, a, v134) * (1000.0 / *(generatedVehicle + 242)));
                         v139         = v138;
-                        *(v40 + 232) = v138;
+                        *(generatedVehicle + 232) = v138;
                         v140         = (CTimer::m_snTimeInMilliseconds - a7a * v139);
                         a1.x         = v241;
                         a1.y         = v231;
                         v.x          = v234;
                         v.y          = v232;
-                        WORD2(v140)  = *(v40 + 467);
-                        *(v40 + 231) = v140;
+                        WORD2(v140)  = *(generatedVehicle + 467);
+                        *(generatedVehicle + 231) = v140;
                         v141         = ThePaths.pNaviNodes[WORD2(v140) >> 10];
                         a1.z         = 0.0;
                         v.z          = 0.0;
                         v142         = v141[WORD2(v140) & 0x3FF].y * 0.125;
                         v143         = ThePaths.pNaviNodes[WORD2(v140) >> 10][WORD2(v140) & 0x3FF].x;
-                        WORD2(v140)  = *(v40 + 466);
+                        WORD2(v140)  = *(generatedVehicle + 466);
                         v144         = ThePaths.pNaviNodes[WORD2(v140) >> 10];
                         v251.z       = 0.0;
                         v251.x       = v143 * 0.125 + v124;
@@ -1216,16 +1230,16 @@ LABEL_102:
                         if (v165 > 7.0) {
                             goto LABEL_189;
                         }
-                        if (CModelInfo::IsBoatModel(*(v40 + 17))) {
+                        if (CModelInfo::IsBoatModel(*(generatedVehicle + 17))) {
                             y[2]         = generateCarArg3;
-                            *(v40 + 595) = 255;
+                            *(generatedVehicle + 595) = 255;
                         } else {
-                            (*(*v40 + 212))(v40);
+                            (*(*generatedVehicle + 212))(generatedVehicle);
                             y[2] = v165 + generateCarArg3;
                         }
-                        CPlaceable::setPosition(v40, y);
+                        CPlaceable::setPosition(generatedVehicle, y);
                         v.x     = 0.0;
-                        v166    = v40 + 68;
+                        v166    = generatedVehicle + 68;
                         *v166   = 0;
                         v.y     = 0.0;
                         v166[1] = 0;
@@ -1243,37 +1257,37 @@ LABEL_102:
                         what.y  = v239 - from.y;
                         v.z     = v172;
                         if (modelArg1 == 13) {
-                            if (v40[954] == 1) {
-                                v40[54] = v40[54] & 7 | 0x10;
+                            if (generatedVehicle[954] == 1) {
+                                generatedVehicle[54] = generatedVehicle[54] & 7 | 0x10;
                             } else {
-                                v40[54] = v40[54] & 7 | 0x18;
+                                generatedVehicle[54] = generatedVehicle[54] & 7 | 0x18;
                             }
                         } else if (modelArg1 == 24) {
-                            v40[54] = v40[54] & 7 | 0x18;
+                            generatedVehicle[54] = generatedVehicle[54] & 7 | 0x18;
                         } else {
-                            v173 = v40[54];
+                            v173 = generatedVehicle[54];
                             if (v215) {
-                                v40[54] = v173 & 7 | 0x18;
+                                generatedVehicle[54] = v173 & 7 | 0x18;
                             } else if ((v173 & 0xF8) != 24) {
-                                v40[54] = v173 & 7 | 0x10;
+                                generatedVehicle[54] = v173 & 7 | 0x10;
                             }
                         }
-                        CVisibilityPlugins::SetClumpAlpha(*(v40 + 6), 0);
-                        if (CCheat::m_aCheatsActive.FunhouseTheme && !*(v40 + 356)) {
-                            CVehicle::AddVehicleUpgrade(v40, MI_HYDRAULICS);
+                        CVisibilityPlugins::SetClumpAlpha(*(generatedVehicle + 6), 0);
+                        if (CCheat::m_aCheatsActive.FunhouseTheme && !*(generatedVehicle + 356)) {
+                            CVehicle::AddVehicleUpgrade(generatedVehicle, MI_HYDRAULICS);
                         }
-                        v174 = CEntity::GetIsOnScreen(v40);
-                        v175 = *(v40 + 5);
+                        v174 = CEntity::GetIsOnScreen(generatedVehicle);
+                        v175 = *(generatedVehicle + 5);
                         v35  = v174 == 0;
                         v176 = v175 + 4;
                         if (!v35) {
                             if (!v175) {
-                                v176 = (v40 + 4);
+                                v176 = (generatedVehicle + 4);
                             }
                             v177            = vectorSub(&outVec, &from, v176);
                             v178            = v177->y;
                             v179            = v177->x;
-                            LODWORD(pLevel) = *(v40 + 595);
+                            LODWORD(pLevel) = *(generatedVehicle + 595);
                             v208            = sqrt(v179 * v179 + v178 * v178);
                             v180            = SLODWORD(pLevel);
                             if (max_0(170.0, v180) * TheCamera.m_fGenerationDistMultiplier < v208
@@ -1282,7 +1296,7 @@ LABEL_102:
                             }
                             v181 = v175 + 4;
                             if (!v175) {
-                                v181 = (v40 + 4);
+                                v181 = (generatedVehicle + 4);
                             }
                             if (TheCamera.placeable.m_pMatrix) {
                                 v182 = &TheCamera.placeable.m_pMatrix->mat.pos;
@@ -1293,44 +1307,44 @@ LABEL_102:
                             if (TheCamera.m_fGenerationDistMultiplier * 120.0 > sqrt(v183->x * v183->x + v183->y * v183->y) || v223) {
                                 goto LABEL_253;
                             }
-                            if (*(v40 + 17) == 484) {
+                            if (*(generatedVehicle + 17) == 484) {
 LABEL_189:
-                                (**v40)(v40, 1);
+                                (**generatedVehicle)(generatedVehicle, 1);
                                 return;
                             }
 LABEL_196:
-                            pLevel = CModelInfo::ms_modelInfoPtrs[*(v40 + 17)]->clump.base.m_pColModel->m_Sphere.sphere.m_fRadius;
+                            pLevel = CModelInfo::ms_modelInfoPtrs[*(generatedVehicle + 17)]->clump.base.m_pColModel->m_Sphere.sphere.m_fRadius;
                             v189   = v175 + 4;
                             if (!v175) {
-                                v189 = (v40 + 4);
+                                v189 = (generatedVehicle + 4);
                             }
                             CWorld::FindObjectsKindaColliding(v189, pLevel, 1, &generateCarArg5, 2, 0, 0, 1, 1, 0, 0);
                             if (!LOWORD(generateCarArg5) && v.x * what.x + v.y * what.y < 0.0) {
                                 CVehicleModelInfo::ChooseVehicleColour(
-                                    CModelInfo::ms_modelInfoPtrs[*(v40 + 17)],
-                                    v40 + 1'076,
-                                    v40 + 1'077,
-                                    v40 + 1'078,
-                                    v40 + 1'079,
+                                    CModelInfo::ms_modelInfoPtrs[*(generatedVehicle + 17)],
+                                    generatedVehicle + 1'076,
+                                    generatedVehicle + 1'077,
+                                    generatedVehicle + 1'078,
+                                    generatedVehicle + 1'079,
                                     1
                                 );
-                                CWorld::Add(v40);
-                                v190 = *(v40 + 17);
-                                if (v190 == 531 || v190 == 532 || *(v40 + 357) == 10) {
-                                    v40[976] /= 3;
+                                CWorld::Add(generatedVehicle);
+                                v190 = *(generatedVehicle + 17);
+                                if (v190 == 531 || v190 == 532 || *(generatedVehicle + 357) == 10) {
+                                    generatedVehicle[976] /= 3;
                                 }
                                 if (CGameLogic::LaRiotsActiveHere()) {
                                     LODWORD(pLevel) = rand() % 1'000;
-                                    *(v40 + 304)    = SLODWORD(pLevel);
+                                    *(generatedVehicle + 304)    = SLODWORD(pLevel);
                                 }
                                 if (v170 == 13) {
                                     CCarCtrl::LastTimeLawEnforcerCreated = CTimer::m_snTimeInMilliseconds;
                                 }
-                                if (*(v40 + 17) == 457) {
-                                    v40[54]  = v40[54] & 7 | 0x18;
-                                    v40[953] = 2;
+                                if (*(generatedVehicle + 17) == 457) {
+                                    generatedVehicle[54]  = generatedVehicle[54] & 7 | 0x18;
+                                    generatedVehicle[953] = 2;
                                 }
-                                if (!*(v40 + 356)) {
+                                if (!*(generatedVehicle + 356)) {
                                     switch (v170) {
                                     case 0:
                                     case 4:
@@ -1360,53 +1374,53 @@ LABEL_196:
                                         break;
                                     }
                                 }
-                                if (*(v40 + 357) == 9 && !v40[953]) {
-                                    v40[54]  = v40[54] & 7 | 0x18;
-                                    v40[953] = 6;
+                                if (*(generatedVehicle + 357) == 9 && !generatedVehicle[953]) {
+                                    generatedVehicle[54]  = generatedVehicle[54] & 7 | 0x18;
+                                    generatedVehicle[953] = 6;
                                 }
                                 if (v215
                                     || v170 == 13
                                     || (v191 = FindPlayerPed(-1), CPlayerPed::GetWantedLevel(v191))
                                     || !CCheat::m_aCheatsActive.AggressiveDrivers && CCarCtrl::TimeNextMadDriverChaseCreated > 0.0
                                     || v222
-                                    || !CCarCtrl::CreatePoliceChase(v40, v170, LODWORD(carGenerationNodeAddr1))) {
+                                    || !CCarCtrl::CreatePoliceChase(generatedVehicle, v170, LODWORD(carGenerationNodeAddr1))) {
                                     if (v225) {
-                                        v192 = *(v40 + 17);
+                                        v192 = *(generatedVehicle + 17);
                                         if (v192 != eModelID::MODEL_FREEWAY && v192 != eModelID::MODEL_PCJ600 && v192 != eModelID::MODEL_FCR900 && v192 != eModelID::MODEL_NRG500 && v192 != eModelID::MODEL_BF400 && v192 != eModelID::MODEL_WAYFARER
                                             || gbLARiots
                                             || CGeneral::GetRandomNumberInRange(0, 7)
-                                            || (CCarCtrl::CreateConvoy(v40, v170), !v193)) {
-                                            CCarCtrl::SetUpDriverAndPassengersForVehicle(v40, v170, 1, 1, 0, 99);
-                                            v194            = v40[54];
-                                            LODWORD(pLevel) = v40[976];
+                                            || (CCarCtrl::CreateConvoy(generatedVehicle, v170), !v193)) {
+                                            CCarCtrl::SetUpDriverAndPassengersForVehicle(generatedVehicle, v170, 1, 1, 0, 99);
+                                            v194            = generatedVehicle[54];
+                                            LODWORD(pLevel) = generatedVehicle[976];
                                             v195            = SLODWORD(pLevel);
-                                            v40[54]         = v194 & 7 | 0x18;
-                                            v40[953]        = 2;
+                                            generatedVehicle[54]         = v194 & 7 | 0x18;
+                                            generatedVehicle[953]        = 2;
                                             v196            = (v195 + 10.0);
-                                            v40[976]        = v196;
+                                            generatedVehicle[976]        = v196;
                                             LODWORD(pLevel) = v196;
                                             v197            = v196;
-                                            v198            = CPlaceable__getTopVector(v40, &outVec);
+                                            v198            = CPlaceable__getTopVector(generatedVehicle, &outVec);
                                             v199            = VectorScale(&a2, v198, v197);
                                             v200            = VectorScale(&out, v199, 0.02);
-                                            *(v40 + 17)     = LODWORD(v200->x);
-                                            *(v40 + 18)     = LODWORD(v200->y);
-                                            *(v40 + 19)     = LODWORD(v200->z);
+                                            *(generatedVehicle + 17)     = LODWORD(v200->x);
+                                            *(generatedVehicle + 18)     = LODWORD(v200->y);
+                                            *(generatedVehicle + 19)     = LODWORD(v200->z);
                                             if (CGameLogic::LaRiotsActiveHere() || CCheat::m_aCheatsActive.AggressiveDrivers) {
-                                                v201 = *(v40 + 280);
+                                                v201 = *(generatedVehicle + 280);
                                                 if (v201) {
                                                     *(v201 + 1'144) |= 0x800u;
                                                 }
                                             }
-                                            v40[1'070] |= 8u;
+                                            generatedVehicle[1'070] |= 8u;
                                         } else {
-                                            CCarCtrl::SetUpDriverAndPassengersForVehicle(v40, v170, 1, 1, 0, 99);
+                                            CCarCtrl::SetUpDriverAndPassengersForVehicle(generatedVehicle, v170, 1, 1, 0, 99);
                                         }
                                     } else if (v170 == 13 || v170 == 24) {
-                                        CCarAI::AddPoliceCarOccupants(v40, 0);
+                                        CCarAI::AddPoliceCarOccupants(generatedVehicle, 0);
                                     } else {
                                         byte_9690CC = 1;
-                                        CCarCtrl::SetUpDriverAndPassengersForVehicle(v40, v170, 0, 0, 0, 99);
+                                        CCarCtrl::SetUpDriverAndPassengersForVehicle(generatedVehicle, v170, 0, 0, 0, 99);
                                         byte_9690CC = 0;
                                     }
                                 } else if (CGameLogic::LaRiotsActiveHere()) {
@@ -1415,38 +1429,38 @@ LABEL_196:
                                     CCarCtrl::TimeNextMadDriverChaseCreated = CGeneral::GetRandomNumberInRange(600.0, 1200.0);
                                 }
                                 if (v170 == 13 || v170 == 24) {
-                                    CVehicle::ChangeLawEnforcerState(v40, 1);
+                                    CVehicle::ChangeLawEnforcerState(generatedVehicle, 1);
                                 }
-                                CStreaming::PossiblyStreamCarOutAfterCreation(*(v40 + 17));
-                                sub_421120(CModelInfo::ms_modelInfoPtrs[*(v40 + 17)]);
+                                CStreaming::PossiblyStreamCarOutAfterCreation(*(generatedVehicle + 17));
+                                sub_421120(CModelInfo::ms_modelInfoPtrs[*(generatedVehicle + 17)]);
                                 return;
                             }
 LABEL_253:
-                            (**v40)(v40, 1);
+                            (**generatedVehicle)(generatedVehicle, 1);
                             return;
                         }
                         if (!v175) {
-                            v176 = (v40 + 4);
+                            v176 = (generatedVehicle + 4);
                         }
                         v184            = vectorSub(&outVec, &from, v176);
                         v185            = v184->y;
                         v186            = v184->x;
-                        LODWORD(pLevel) = *(v40 + 595);
+                        LODWORD(pLevel) = *(generatedVehicle + 595);
                         v187            = sqrt(v186 * v186 + v185 * v185);
                         v188            = SLODWORD(pLevel);
                         if (max_0(v188, 170.0) * 0.0058823531 * 45.0 >= v187 || v223) {
                             goto LABEL_196;
                         }
 LABEL_195:
-                        (**v40)(v40, 1);
+                        (**generatedVehicle)(generatedVehicle, 1);
                         return;
                     }
-                    v40[955] = 0;
-                    v40[976] = CGeneral::GetRandomNumberInRange(14.0, 18.0);
-                    v40[953] = 2;
-                    v40[954] = CCarAI::FindPoliceBoatMissionForWantedLevel(v204);
+                    generatedVehicle[955] = 0;
+                    generatedVehicle[976] = CGeneral::GetRandomNumberInRange(14.0, 18.0);
+                    generatedVehicle[953] = 2;
+                    generatedVehicle[954] = CCarAI::FindPoliceBoatMissionForWantedLevel(v204);
                 }
-                v40[1'068] |= 1u;
+                generatedVehicle[1'068] |= 1u;
                 goto LABEL_102;
             }
         }
