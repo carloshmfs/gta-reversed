@@ -390,7 +390,7 @@ void CCarCtrl::GenerateOneRandomCar() {
     float            playerSpeedX;         // ecx
     float            playerSpeedY;         // edx
     float            playerSpeedY;         // eax
-    CWanted*         v9;         // edi
+    CWanted*         playerWanted;         // edi
     int              v10;        // edi
     CAutomobile*     v11;        // eax
     double           vehicleSpeedY;        // st7
@@ -424,7 +424,7 @@ void CCarCtrl::GenerateOneRandomCar() {
     CVehicle* generatedVehicle;        // esi
     float            v41;        // eax
     double           v42;        // st7
-    __int16          v43;        // cx
+    eModelID         v43;        // cx
     CColModel*       v44;        // eax
     double           v45;        // st7
     unsigned __int8  v46;        // al
@@ -678,7 +678,7 @@ void CCarCtrl::GenerateOneRandomCar() {
 
     if (FindPlayerWanted(-1)->m_nWantedLevel <= 1
         || CCarCtrl::NumLawEnforcerCars >= FindPlayerWanted(-1)->m_nMaxCopCarsInPursuit
-        || (v9 = FindPlayerWanted(-1), FindPlayerWanted(-1)->m_nCopsInPursuit >= v9->m_nMaxCopsInPursuit)
+        || (playerWanted = FindPlayerWanted(-1), FindPlayerWanted(-1)->m_nCopsInPursuit >= playerWanted->m_nMaxCopsInPursuit)
         || CGame::currArea
         || CGangWars::GangWarFightingGoingOn()
         || FindPlayerWanted(-1)->m_nWantedLevel <= 3
@@ -701,7 +701,7 @@ void CCarCtrl::GenerateOneRandomCar() {
 
     if (CGameLogic::LaRiotsActiveHere() && !gbLARiots_NoPoliceCars && (rand() & 0x7F) < 55) {
         v10 = 13;
-        vehicleModel = CCarCtrl::ChoosePoliceCarModel(0);
+        vehicleModel = static_cast<eModelID>(CCarCtrl::ChoosePoliceCarModel(0));
         modelArg1 = 13;
     }
 
@@ -918,7 +918,7 @@ LABEL_39:
                         }
                         generatedVehicle->m_autoPilot.m_nCruiseSpeed = v42;
 LABEL_81:
-                        v43 = *(generatedVehicle + 17); // generatedVehicle->m_placement.m_fHeading ?? 
+                        v43 = static_cast<eModelID>(generatedVehicle->m_nModelIndex);
                         v44 = CModelInfo::ms_modelInfoPtrs[v43]->clump.base.m_pColModel;
                         if (v44->m_Box.max.y - v44->m_Box.min.y > 10.0 || v38 == 5) {
                             generatedVehicle->m_autoPilot.m_nCruiseSpeed = 3 * generatedVehicle->m_autoPilot.m_nCruiseSpeed / 4;
@@ -935,8 +935,8 @@ LABEL_81:
                         generatedVehicle->m_autoPilot.m_nTempAction      = eAutoPilotTempAction::TEMPACT_NONE;
                         generatedVehicle->m_autoPilot.m_nCarDrivingStyle = eCarDrivingStyle::DRIVING_STYLE_STOP_FOR_CARS;
 LABEL_102:
-                        if (*(generatedVehicle + 17) == 423) {
-                            generatedVehicle->vehicleFlags; |= 0x80u; // TODO: offset: 1069
+                        if (generatedVehicle->m_nModelIndex == eModelID::MODEL_MRWHOOP) {
+                            generatedVehicle->vehicleFlags |= 0x80u; // TODO: offset: 1069
                         }
                         generatedVehicle->m_vehicleAudio.m_AuSettings.RadioType = v207;
                         v47          = rand() % a5c;
@@ -945,7 +945,7 @@ LABEL_102:
                         if (CGameLogic::LaRiotsActiveHere()) {
                             v48 = 80;
                         } else {
-                            v49 = CVehicle::GetVehicleAppearance(generatedVehicle) - 2;
+                            v49 = CVehicle::GetVehicleAppearance() - 2;
                             if (v49) {
                                 if (v49 == 2) {
                                     v48 = 10;
@@ -963,7 +963,7 @@ LABEL_102:
                             v225 = 1;
                             generateCarArg3 = 1.0;
                         }
-                        v50  = CModelInfo::ms_modelInfoPtrs[*(generatedVehicle + 17)]->clump.base.m_pColModel;
+                        v50  = CModelInfo::ms_modelInfoPtrs[generatedVehicle->m_nModelIndex]->clump.base.m_pColModel;
                         v51  = &ThePaths.m_pPathNodes[v22][v235 / 0x1C];
                         a5d  = (v50->m_Box.max.y - v50->m_Box.min.y) * 0.5 + 1.0;
                         v52  = CPathNode::GetNodeCoors(v51, &pPosition);
