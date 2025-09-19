@@ -460,7 +460,7 @@ void CCarCtrl::GenerateOneRandomCar() {
     long double      v76;        // st7
     double           v77;        // st7
     unsigned int     v78;        // ebx
-    unsigned __int16 v79;        // bp
+    eAERadioType     v79;        // bp
     CVector*         v80;        // ST38_4
     CVector*         v81;        // eax
     CVector*         v82;        // eax
@@ -587,7 +587,7 @@ void CCarCtrl::GenerateOneRandomCar() {
     CPopulation*     v203;       // [esp+20h] [ebp-13Ch]
     CCarAI*          v204;       // [esp+20h] [ebp-13Ch]
     bool             v205;       // [esp+20h] [ebp-13Ch]
-    int              numAllVehicles;       // [esp+30h] [ebp-12Ch]
+    int              totalVehiclesGenerated;       // [esp+30h] [ebp-12Ch]
     unsigned __int16 v207;       // [esp+30h] [ebp-12Ch]
     float            v208;       // [esp+30h] [ebp-12Ch]
     float            carDensity;         // [esp+34h] [ebp-128h]
@@ -657,22 +657,29 @@ void CCarCtrl::GenerateOneRandomCar() {
     what.x      = playerSpeedX;
     what.z      = playerSpeedY;
 
-    numAllVehicles = CCarCtrl::NumRandomCars + CCarCtrl::NumLawEnforcerCars + CCarCtrl::NumMissionCars + CCarCtrl::NumAmbulancesOnDuty + CCarCtrl::NumFireTrucksOnDuty;
-    carDensity = CCarCtrl::CarDensityMultiplier;
+    auto canGenerateVehicle = []() -> bool {
+        int32 totalVehiclesGenerated = CCarCtrl::NumRandomCars + CCarCtrl::NumLawEnforcerCars + CCarCtrl::NumMissionCars + CCarCtrl::NumAmbulancesOnDuty + CCarCtrl::NumFireTrucksOnDuty;
+        float carDensityMultiplier = CCarCtrl::CarDensityMultiplier;
 
-    if (CCullZones::FewerCars()) {
-        carDensity = carDensity * 0.60000002;
-    }
+        if (CCullZones::FewerCars()) {
+            carDensityMultiplier *= 0.60000002;
+        }
 
-    v229 = numAllVehicles;
-    if (CPopulation::FindCarMultiplierMotorway() * CCarCtrl::MaxNumberOfCarsInUse * carDensity <= numAllVehicles
-        || CPopulation::FindCarMultiplierMotorway()
-                * (CPopCycle::m_NumOther_Cars
-                   + CPopCycle::m_NumCops_Cars
-                   + CPopCycle::m_NumGangs_Cars
-                   + CPopCycle::m_NumDealers_Cars)
-                * carDensity
-            <= numAllVehicles) {
+        if (CPopulation::FindCarMultiplierMotorway() * CCarCtrl::MaxNumberOfCarsInUse * CCarCtrl::CarDensityMultiplier <= totalVehiclesGenerated
+            || CPopulation::FindCarMultiplierMotorway()
+                    * (CPopCycle::m_NumOther_Cars
+                       + CPopCycle::m_NumCops_Cars
+                       + CPopCycle::m_NumGangs_Cars
+                       + CPopCycle::m_NumDealers_Cars)
+                    * CCarCtrl::CarDensityMultiplier
+                <= totalVehiclesGenerated) {
+            return false;
+        }
+
+        return true;
+    };
+
+    if (!canGenerateVehicle()) {
         return;
     }
 
@@ -864,8 +871,10 @@ LABEL_39:
                 }
 
                 /*
-                * 17 =
-                * 467 = m_vehicleAudio.m
+                * 17 = m_nModelIndex
+                * 45 =
+                * 228 = m_vecLastCollisionImpactVelocity.y
+                * 467 = m_vehicleAudio.m_AuSettings.RadioType
                 * 949 = m_autoPilot._smthCurr
                 * 950 = m_autoPilot._smthNext
                 * 951 = m_autoPilot.m_nCurrentLane
@@ -1048,8 +1057,8 @@ LABEL_102:
                         *(*(generatedVehicle + 5) + 32) = 0;
                         *(*(generatedVehicle + 5) + 36) = 0;
                         *(*(generatedVehicle + 5) + 40) = 1'065'353'216;
-                        v78                = *(generatedVehicle + 228);
-                        v79                = *(generatedVehicle + 467);
+                        v78                = generatedVehicle->m_vecLastCollisionImpactVelocity.y;
+                        v79                = generatedVehicle->m_vehicleAudio.m_AuSettings.RadioType;
                         v80                = CPathNode::GetNodeCoors(&ThePaths.m_pPathNodes[v78][*(generatedVehicle + 228) >> 16], &outVec);
                         v81                = CCompressedVector::to3dVector(&ThePaths.pNaviNodes[v79 >> 10][v79 & 0x3FF], &a2);
                         v82                = vectorSub(&out, v81, v80);
@@ -1058,10 +1067,10 @@ LABEL_102:
                         v84                = CPathNode::GetNodeCoors(v83, &outVec);
                         v85                = CCompressedVector::to3dVector(&ThePaths.pNaviNodes[v79 >> 10][v79 & 0x3FF], &v249);
                         v86                = vectorSub(&pPosition, v85, v84);
-                        if (*&vehicleModel / (sqrt(v86->x * v86->x + v86->y * v86->y) + *&vehicleModel) <= generateCarArg3) {
+                        if (vehicleModel / (sqrt(v86->x * v86->x + v86->y * v86->y) + vehicleModel) <= generateCarArg3) {
                             CCarCtrl::PickNextNodeRandomly(generatedVehicle);
-                            v96        = *(generatedVehicle + 228);
-                            v79        = *(generatedVehicle + 467);
+                            v96        = generatedVehicle->m_vecLastCollisionImpactVelocity.y;
+                            v79        = generatedVehicle->m_vehicleAudio.m_AuSettings.RadioType;
                             v97        = CPathNode::GetNodeCoors(&ThePaths.m_pPathNodes[v96][*(generatedVehicle + 228) >> 16], &outVec);
                             v98        = CCompressedVector::to3dVector(&ThePaths.pNaviNodes[v79 >> 10][v79 & 0x3FF], &a2);
                             *&v99      = COERCE_FLOAT(vectorSub(&out, v98, v97));
@@ -1385,7 +1394,7 @@ LABEL_196:
                                     || v222
                                     || !CCarCtrl::CreatePoliceChase(generatedVehicle, v170, LODWORD(carGenerationNodeAddr1))) {
                                     if (v225) {
-                                        v192 = *(generatedVehicle + 17);
+                                        v192 = generatedVehicle->m_nModelIndex;
                                         if (v192 != eModelID::MODEL_FREEWAY && v192 != eModelID::MODEL_PCJ600 && v192 != eModelID::MODEL_FCR900 && v192 != eModelID::MODEL_NRG500 && v192 != eModelID::MODEL_BF400 && v192 != eModelID::MODEL_WAYFARER
                                             || gbLARiots
                                             || CGeneral::GetRandomNumberInRange(0, 7)
