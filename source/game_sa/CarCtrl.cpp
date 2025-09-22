@@ -394,12 +394,11 @@ void CCarCtrl::GenerateOneRandomCar() {
     int              v10;        // edi
     CAutomobile*     v11;        // eax
     double           vehicleSpeedY;        // st7
-    long double      vehicleSpeed;        // st6
     long double      v14;        // st6
     long double      v15;        // st6
     bool             generateCarArg12;        // al
     float            generateCarArg6;         // ST1C_4
-    CVector          vehicleGeneratePos;        // ST00_12
+            // ST00_12
     float            v19;        // eax
     int              v20;        // esi
     CPathNode*       v21;        // ecx
@@ -600,7 +599,6 @@ void CCarCtrl::GenerateOneRandomCar() {
     signed int       generateCarArg4;         // [esp+40h] [ebp-11Ch]
     float            a7a;        // [esp+40h] [ebp-11Ch]
     float            generateCarArg3;       // [esp+44h] [ebp-118h]
-    eModelID         vehicleModel; // [esp+48h] [ebp-114h]
     float            generateCarArg5;         // [esp+4Ch] [ebp-110h]
     float            pLevel;     // [esp+50h] [ebp-10Ch]
     char             v222;       // [esp+56h] [ebp-106h]
@@ -658,8 +656,8 @@ void CCarCtrl::GenerateOneRandomCar() {
     what.z      = playerSpeedY;
 
     auto canGenerateVehicle = []() -> bool {
-        int32 totalVehiclesGenerated = CCarCtrl::NumRandomCars + CCarCtrl::NumLawEnforcerCars + CCarCtrl::NumMissionCars + CCarCtrl::NumAmbulancesOnDuty + CCarCtrl::NumFireTrucksOnDuty;
-        float carDensityMultiplier = CCarCtrl::CarDensityMultiplier;
+        auto totalVehiclesGenerated = CCarCtrl::NumRandomCars + CCarCtrl::NumLawEnforcerCars + CCarCtrl::NumMissionCars + CCarCtrl::NumAmbulancesOnDuty + CCarCtrl::NumFireTrucksOnDuty;
+        auto carDensityMultiplier   = CCarCtrl::CarDensityMultiplier;
 
         if (CCullZones::FewerCars()) {
             carDensityMultiplier *= 0.60000002;
@@ -683,48 +681,44 @@ void CCarCtrl::GenerateOneRandomCar() {
         return;
     }
 
-    if (FindPlayerWanted(-1)->m_nWantedLevel <= 1
+    eGeneratedVehicleType vehicleModelType;
+    eModelID              vehicleModel;
+
+    if (FindPlayerWanted(-1) && FindPlayerWanted(-1)->m_nWantedLevel <= 1
         || CCarCtrl::NumLawEnforcerCars >= FindPlayerWanted(-1)->m_nMaxCopCarsInPursuit
-        || (playerWanted = FindPlayerWanted(-1), FindPlayerWanted(-1)->m_nCopsInPursuit >= playerWanted->m_nMaxCopsInPursuit)
+        || (FindPlayerWanted(-1)->m_nCopsInPursuit >= FindPlayerWanted(-1)->m_nMaxCopsInPursuit)
         || CGame::currArea
         || CGangWars::GangWarFightingGoingOn()
         || FindPlayerWanted(-1)->m_nWantedLevel <= 3
             && (FindPlayerWanted(-1)->m_nWantedLevel <= 2
                 || CTimer::m_snTimeInMilliseconds <= (CCarCtrl::LastTimeLawEnforcerCreated + 5'000))
             && CTimer::m_snTimeInMilliseconds <= (CCarCtrl::LastTimeLawEnforcerCreated + 8'000)) {
-        vehicleModel = CCarCtrl::ChooseModel(&modelArg1);
-        if (vehicleModel == -6.8056469e38 /*NaN*/) {
+        vehicleModel = static_cast<eModelID>(CCarCtrl::ChooseModel(reinterpret_cast<int32*>(&vehicleModelType)));
+        if (vehicleModel == eModelID::MODEL_INVALID) {
             return;
         }
-        v10 = modelArg1;
-        if ((modelArg1 == 13 || modelArg1 == 24) && FindPlayerWanted(-1)->m_nWantedLevel >= 1) {
+
+        if ((vehicleModelType == eGeneratedVehicleType::COP_CARS || vehicleModelType == 24) && FindPlayerWanted(-1)->m_nWantedLevel >= 1) {
             return;
         }
     } else {
-        v10 = 13;
-        vehicleModel = CCarCtrl::ChoosePoliceCarModel(0);
-        modelArg1 = 13;
+        vehicleModel = static_cast<eModelID>(CCarCtrl::ChoosePoliceCarModel(0));
+        vehicleModelType = eGeneratedVehicleType::COP_CARS;
     }
 
     if (CGameLogic::LaRiotsActiveHere() && !gbLARiots_NoPoliceCars && (rand() & 0x7F) < 55) {
-        v10 = 13;
         vehicleModel = static_cast<eModelID>(CCarCtrl::ChoosePoliceCarModel(0));
-        modelArg1 = 13;
+        vehicleModelType = eGeneratedVehicleType::COP_CARS;
     }
 
     if (TheCamera.m_mCameraMatrix.GetForward().z >= -0.89999998) {
-        //v11 = FindPlayerVehicle(-1, 0);
         auto playerVehicle = FindPlayerVehicle(-1, 0);
         if (playerVehicle) {
-            vehicleSpeedY = playerVehicle->m_vecMoveSpeed.y;
-            vehicleSpeedX = playerVehicle->m_vecMoveSpeed.x;
             // a²=b²+c²
-            vehicleSpeed = sqrt(vehicleSpeedY * vehicleSpeedY + vehicleSpeedX * vehicleSpeedX);
-
+            auto vehicleSpeed = sqrt(playerVehicle->m_vecMoveSpeed.y * playerVehicle->m_vecMoveSpeed.y + playerVehicle->m_vecMoveSpeed.x * playerVehicle->m_vecMoveSpeed.x);
             if (vehicleSpeed > 0.40000001) {
-                v14  = 1.0 / vehicleSpeed;
-                vehicleGenerationRadius  = vehicleSpeedX * v14;
-                generateCarArg3 = v14 * vehicleSpeedY;
+                vehicleGenerationRadius = playerVehicle->m_vecMoveSpeed.x * (1.0 / vehicleSpeed);
+                generateCarArg3 = (1.0 / vehicleSpeed) * vehicleSpeedY;
                 switch (CTimer::m_FrameCounter & 3) {
                 case 0:
                 case 1:
@@ -735,73 +729,54 @@ void CCarCtrl::GenerateOneRandomCar() {
                     generateCarArg4 = 1'060'437'492;
                     generateCarArg5 = 0;
                     break;
-                default:
-                    goto LABEL_39;
                 }
-                goto LABEL_39;
             }
 
             if (vehicleSpeed > 0.1) {
-                v15  = 1.0 / vehicleSpeed;
-                vehicleGenerationRadius  = vehicleSpeedX * v15;
-                generateCarArg3 = v15 * vehicleSpeedY;
+                vehicleGenerationRadius = playerVehicle->m_vecMoveSpeed.x * (1.0 / vehicleSpeed);
+                generateCarArg3 = (1.0 / vehicleSpeed) * vehicleSpeedY;
                 switch (CTimer::m_FrameCounter & 3) {
                 case 0:
-LABEL_31:
                     generateCarArg4 = 1'062'836'634;
-                    goto LABEL_38;
+                    generateCarArg5 = 1;
+                    break;
                 case 1:
-                    goto LABEL_37;
+                    generateCarArg4 = 1'060'437'492;
+                    break;
                 case 2:
                 case 3:
-LABEL_28:
-                    generateCarArg4         = 1'060'437'492;
-                    LOBYTE(generateCarArg5) = 0;
+                    generateCarArg4 = 1'060'437'492;
+                    generateCarArg5 = 0;
                     break;
-                default:
-                    goto LABEL_39;
                 }
-                goto LABEL_39;
-            }
-            vehicleGenerationRadius  = TheCamera.m_fCamFrontXNorm;
-            generateCarArg3 = TheCamera.m_fCamFrontYNorm;
+            
         } else {
             vehicleGenerationRadius  = TheCamera.m_fCamFrontXNorm;
             generateCarArg3 = TheCamera.m_fCamFrontYNorm;
         }
-        if (CTimer::m_FrameCounter & 1) {
-            if ((CTimer::m_FrameCounter & 1) == 1) {
-                generateCarArg4         = 1'060'437'492;
-                LOBYTE(generateCarArg5) = 0;
-            }
-            goto LABEL_39;
+
+        if ((CTimer::m_FrameCounter & 1) == 1) {
+            generateCarArg4 = 1'060'437'492;
+            generateCarArg5 = 0;
         }
-LABEL_37:
-        generateCarArg4 = 1'060'437'492;
     } else {
-        v223 = 1;
-        generateCarArg3 = 0.70700002;
         vehicleGenerationRadius  = 0.70700002;
+        generateCarArg3 = 0.70700002;
         generateCarArg4   = -1'082'130'432;
     }
-LABEL_38:
-    generateCarArg5 = 1;
-LABEL_39:
-    generateCarArg12     = v10 != 13 || FindPlayerWanted(-1)->m_nWantedLevel < 1;
-    generateCarArg6      = TheCamera.m_fGenerationDistMultiplier * 160.0;
-    vehicleGeneratePos.x   = v2;
-    vehicleGeneratePos.y = __PAIR__(LODWORD(v4), LODWORD(v3));
-    if (CCarCtrl::GenerateCarCreationCoors2(vehicleGeneratePos, vehicleGenerationRadius, generateCarArg3, generateCarArg4, generateCarArg5, generateCarArg6, 38.0, &carGenerationOrigin, &carGenerationNodeAddr1, &carGenerationNodeAddr2, &generateCarArg3, generateCarArg12, 0)) {
-        LODWORD(v19)    = 28 * *&carGenerationNodeAddr2[2];
-        v20             = HIWORD(carGenerationNodeAddr1);
-        v21             = ThePaths.m_pPathNodes[*carGenerationNodeAddr2];
-        v22             = LOWORD(carGenerationNodeAddr1);
-        v23             = ThePaths.m_pPathNodes[v22];
-        v229            = v19;
+
+    generateCarArg12        = vehicleModelType != eGeneratedVehicleType::COP_CARS || FindPlayerWanted(-1)->m_nWantedLevel < 1;
+    generateCarArg6         = TheCamera.m_fGenerationDistMultiplier * 160.0;
+    auto vehicleGeneratePos = FindPlayerCentreOfWorld(CWorld::PlayerInFocus);
+    CNodeAddress outAddr1;
+    CNodeAddress outAddr2;
+    if (CCarCtrl::GenerateCarCreationCoors2(vehicleGeneratePos, vehicleGenerationRadius, generateCarArg3, generateCarArg4, generateCarArg5, generateCarArg6, 38.0, &carGenerationOrigin, &outAddr1, &outAddr2, &generateCarArg3, generateCarArg12, 0)) {
+        auto pathNode1               = ThePaths.m_pPathNodes[outAddr1.m_wAreaId][outAddr1.m_wNodeId];
+        auto pathNode2               = ThePaths.m_pPathNodes[outAddr2.m_wAreaId][outAddr2.m_wNodeId];
         LOBYTE(v19)     = v21->m_dwFlags[LODWORD(v19) + 2];
         LOBYTE(v21)     = v23[v20].m_dwFlags[2] & 0xF;
         v24             = LOBYTE(v19) & 0xF;
-        v215            = 0;
+        bool isBoatNode = false;
         LODWORD(pLevel) = 4 * LOWORD(carGenerationNodeAddr1);
         v235            = 28 * HIWORD(carGenerationNodeAddr1);
         LOBYTE(generateCarArg5)      = v21;
@@ -812,8 +787,8 @@ LABEL_39:
             if (ThePaths.m_pPathNodes[v22][v20].m_dwFlags[0] >= 0) {
                 CWorld::FindObjectsKindaColliding(&carGenerationOrigin, 8.0, 1, &generateCarArg5, 2, 0, 0, 1, 1, 0, 0);
             } else {
-                v215 = 1;
-                if (v10 == 13) {
+                isBoatNode = true;
+                if (vehicleModelType == eGeneratedVehicleType::COP_CARS) {
                     vehicleModel = eModelID::MODEL_PREDATOR;
                     modelArg1       = 24;
                     if (unk_8E6E68 != 1) {
@@ -821,9 +796,8 @@ LABEL_39:
                         return;
                     }
                 } else {
-                    v25      = CLoadedCarGroup::PickLeastUsedModel(1);
-                    vehicleModel = v25;
-                    if (*&v25 == -6.8056469e38 /*NaN*/ || CStreaming::ms_aInfoForModel[v25].m_nLoadState != 1) {
+                    vehicleModel = CLoadedCarGroup::PickLeastUsedModel(1);
+                    if (vehicleModel == eModelID::MODEL_INVALID || CStreaming::ms_aInfoForModel[vehicleModel].m_LoadState != eStreamingLoadState::LOADSTATE_LOADED) {
                         return;
                     }
                 }
@@ -886,24 +860,23 @@ LABEL_39:
                 */
 
                 v37          = CCarCtrl::GetNewVehicleDependingOnCarModel(v34, 1);
-                v38          = modelArg1;
                 v39          = *carGenerationNodeAddr2;
                 generatedVehicle = v37;
                 v41          = carGenerationNodeAddr1;
-                v35          = modelArg1 == 13;
                 generatedVehicle->m_vehicleAudio.m_AuSettings.HornPitch = -1;
                 generatedVehicle->m_vecLastCollisionImpactVelocity.y = v41;
-                *(generatedVehicle + 229) = v39;
-                if (v35) {
+                //*(generatedVehicle + 229) = v39;
+                if (modelArg1 == eGeneratedVehicleType::COP_CARS) {
                     generatedVehicle->m_autoPilot.m_nTempAction = eAutoPilotTempAction::TEMPACT_NONE;
                     if (FindPlayerWanted(-1)->m_nWantedLevel) {
                         generatedVehicle->m_autoPilot.m_nCruiseSpeed = CCarAI::FindPoliceCarSpeedForWantedLevel(generatedVehicle);
-                        if (CVehicle::GetVehicleAppearance(generatedVehicle) == 2) {
-                            v46 = CCarAI::FindPoliceBikeMissionForWantedLevel(v204);
+                        eCarMission vehicleMission;
+                        if (generatedVehicle->GetVehicleAppearance() == eVehicleAppearance::VEHICLE_APPEARANCE_BIKE) {
+                            vehicleMission = CCarAI::FindPoliceBikeMissionForWantedLevel();
                         } else {
-                            v46 = CCarAI::FindPoliceCarMissionForWantedLevel(v204);
+                            vehicleMission = CCarAI::FindPoliceCarMissionForWantedLevel();
                         }
-                        generatedVehicle->m_autoPilot.m_nCarMission = v46;
+                        generatedVehicle->m_autoPilot.m_nCarMission = vehicleMission;
                         generatedVehicle->m_autoPilot.m_nCarDrivingStyle = eCarDrivingStyle::DRIVING_STYLE_AVOID_CARS;
                     } else {
                         generatedVehicle->m_autoPilot.m_nCruiseSpeed = CGeneral::GetRandomNumberInRange(18.0, 24.0);
@@ -915,31 +888,32 @@ LABEL_39:
                         generatedVehicle->m_nSecondaryColor = 0;
                     }
                 } else {
-                    if (v38 != 24) {
+                    if (modelArg1 != 24) {
                         generatedVehicle->m_autoPilot.m_nCruiseSpeed = CGeneral::GetRandomNumberInRange(13.0, 21.0);
-                        if (v38 == 3) {
+                        if (modelArg1 == 3) {
                             v42 = CGeneral::GetRandomNumberInRange(18.0, 27.0);
                         } else {
-                            if (v38 != 1) {
+                            if (modelArg1 != 1) {
                                 goto LABEL_81;
                             }
                             v42 = CGeneral::GetRandomNumberInRange(10.0, 15.0);
                         }
                         generatedVehicle->m_autoPilot.m_nCruiseSpeed = v42;
 LABEL_81:
-                        v43 = static_cast<eModelID>(generatedVehicle->m_nModelIndex);
-                        v44 = CModelInfo::ms_modelInfoPtrs[v43]->clump.base.m_pColModel;
-                        if (v44->m_Box.max.y - v44->m_Box.min.y > 10.0 || v38 == 5) {
+                        auto vehicleModelInfo = CModelInfo::ms_modelInfoPtrs[generatedVehicle->m_nModelIndex]->m_pColModel;
+                        if (vehicleModelInfo->GetBoundingBox().m_vecMax.y - vehicleModelInfo->GetBoundingBox().m_vecMin.y > 10.0 || vehicleModelInfo == 5) {
                             generatedVehicle->m_autoPilot.m_nCruiseSpeed = 3 * generatedVehicle->m_autoPilot.m_nCruiseSpeed / 4;
                         }
-                        if (v215) {
-                            if (v43 == eModelID::MODEL_SQUALO || v43 == eModelID::MODEL_SPEEDER || v43 == eModelID::MODEL_JETMAX) {
-                                v45 = CGeneral::GetRandomNumberInRange(25.0, 35.0);
+                        if (isBoatNode) {
+                            float cruiseSpeed;
+                            if (generatedVehicle->m_nModelIndex == eModelID::MODEL_SQUALO || generatedVehicle->m_nModelIndex == eModelID::MODEL_SPEEDER || generatedVehicle->m_nModelIndex == eModelID::MODEL_JETMAX) {
+                                cruiseSpeed = CGeneral::GetRandomNumberInRange(25.0, 35.0);
                             } else {
-                                v45 = CGeneral::GetRandomNumberInRange(15.0, 24.0);
+                                cruiseSpeed = CGeneral::GetRandomNumberInRange(15.0, 24.0);
                             }
-                            generatedVehicle->m_autoPilot.m_nCruiseSpeed = v45;
+                            generatedVehicle->m_autoPilot.m_nCruiseSpeed = cruiseSpeed;
                         }
+
                         generatedVehicle->m_autoPilot.m_nCarMission      = eCarMission::MISSION_CRUISE;
                         generatedVehicle->m_autoPilot.m_nTempAction      = eAutoPilotTempAction::TEMPACT_NONE;
                         generatedVehicle->m_autoPilot.m_nCarDrivingStyle = eCarDrivingStyle::DRIVING_STYLE_STOP_FOR_CARS;
@@ -954,9 +928,9 @@ LABEL_102:
                         if (CGameLogic::LaRiotsActiveHere()) {
                             v48 = 80;
                         } else {
-                            v49 = CVehicle::GetVehicleAppearance() - 2;
-                            if (v49) {
-                                if (v49 == 2) {
+                            auto vehicleApperance = generatedVehicle->GetVehicleAppearance();
+                            if (vehicleApperance) {
+                                if (vehicleApperance == eVehicleAppearance::VEHICLE_APPEARANCE_BIKE) {
                                     v48 = 10;
                                 } else {
                                     v48 = 200;
@@ -966,9 +940,9 @@ LABEL_102:
                             }
                         }
                         if (!v215
-                            && v38 != 13
+                            && v38 != eGeneratedVehicleType::COP_CARS
                             && !v222
-                            && (!CGeneral::GetRandomNumberInRange(0, v48) || CCheat::m_aCheatsActive.AggressiveDrivers)) {
+                            && (!CGeneral::GetRandomNumberInRange(0, v48) || CCheat::m_aCheatsActive[CHEAT_AGGRESSIVE_DRIVERS])) {
                             v225 = 1;
                             generateCarArg3 = 1.0;
                         }

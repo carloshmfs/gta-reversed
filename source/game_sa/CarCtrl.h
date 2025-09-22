@@ -9,6 +9,11 @@
 #include "PathFind.h"
 #include "Vector.h"
 
+enum eGeneratedVehicleType : int32 {
+    OTHER_CARS = 0,
+    COP_CARS = 13,
+};
+
 class CPhysical;
 class CVehicle;
 class CAutomobile;
