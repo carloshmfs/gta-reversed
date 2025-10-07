@@ -165,7 +165,7 @@ eModelID CCarCtrl::ChooseModel(int32* arg1) {
     int              v10;    // [esp+0h] [ebp-8h]
     float            v11;    // [esp+4h] [ebp-4h]
 
-    v8 = (CPopCycle::m_NumOther_Cars + CPopCycle::m_NumCops_Cars + CPopCycle::m_NumGangs_Cars + CPopCycle::m_NumDealers_Cars);
+    v8 = CPopCycle::GetMaxCarsCurrently();
     if (v8 <= 0 || CCheat::m_aCheatsActive[CHEAT_REDUCED_TRAFFIC] && (rand() * 0.000030517578 * 100.0)) {
         return eModelID::MODEL_INVALID;
     }
@@ -173,63 +173,71 @@ eModelID CCarCtrl::ChooseModel(int32* arg1) {
     v9  = v8;
     if (CPopCycle::m_NumDealers_Cars / v9 > v11 && !CCheat::m_aCheatsActive[CHEAT_GANGS_CONTROLS_THE_STREETS]) {
         *arg1  = 25;
-        result = CPopulation::m_CarGroups[28][0];
-        if (CStreaming::ms_aInfoForModel[CPopulation::m_CarGroups[28][0]].m_LoadState == eStreamingLoadState::LOADSTATE_LOADED) {
+        result = static_cast<eModelID>(CPopulation::m_CarGroups[ePopcycleCarGroup::POPCYCLE_CARGROUP_DEALERS][0]);
+        if (CStreaming::ms_aInfoForModel[CPopulation::m_CarGroups[ePopcycleCarGroup::POPCYCLE_CARGROUP_DEALERS][0]].m_LoadState == eStreamingLoadState::LOADSTATE_LOADED) {
             return result;
         }
         return eModelID::MODEL_INVALID;
     }
-    if ((CPopCycle::m_NumGangs_Cars + CPopCycle::m_NumDealers_Cars) / v9 > v11
-        || CCheat::m_aCheatsActive[CHEAT_GANGS_CONTROLS_THE_STREETS]) {
+    if ((CPopCycle::m_NumGangs_Cars + CPopCycle::m_NumDealers_Cars) / v9 > v11 || CCheat::m_aCheatsActive[CHEAT_GANGS_CONTROLS_THE_STREETS]) {
         if (CPopulation::m_bDontCreateRandomGangMembers) {
             return eModelID::MODEL_INVALID;
         }
+
         v2 = 0;
         if (CPopCycle::m_pCurrZoneInfo->GetSumOfGangDensity() <= 0) {
             return eModelID::MODEL_INVALID;
         }
+
         v10 = CPopCycle::m_pCurrZoneInfo->GetSumOfGangDensity();
         v3 = (rand() * 0.000030517578 * v10);
         if (CPopCycle::m_pCurrZoneInfo->GangStrength[0] < v3) {
             v4 = CPopCycle::m_pCurrZoneInfo->GangStrength[0];
             do {
-                v3 = v3 - v4;
+                v3 -= v4;
                 v4 = CPopCycle::m_pCurrZoneInfo->GangStrength[++v2];
             } while (v4 < v3);
         }
+
         if (CCheat::m_aCheatsActive[CHEAT_GANGS_CONTROLS_THE_STREETS]) {
             v2 = CGeneral::GetRandomNumberInRange(0, 9);
         }
+
         *arg1 = v2 + 14;
         if (CPopulation::PickGangCar(v2) < 0) {
             return eModelID::MODEL_INVALID;
         }
+
         v5 = 0;
         v6 = v2;
-        while (1) {
+        while (true) {
             do {
                 v7 = (rand() * 0.000030517578 * 23.0);
-            } while (CPopulation::m_CarGroups[v6 + 18][v7] == 2'000);
-            result = CPopulation::m_CarGroups[v6 + 18][v7];
+            } while (CPopulation::m_CarGroups[v6 + ePopcycleCarGroup::POPCYCLE_CARGROUP_BALLAS][v7] == 2'000);
+
+            result = static_cast<eModelID>(CPopulation::m_CarGroups[v6 + ePopcycleCarGroup::POPCYCLE_CARGROUP_BALLAS][v7]);
+
             if (CStreaming::ms_aInfoForModel[result].m_LoadState == eStreamingLoadState::LOADSTATE_LOADED) {
                 break;
             }
+
             if (++v5 >= 10) {
                 return eModelID::MODEL_INVALID;
             }
         }
     } else {
-        if ((CPopCycle::m_NumCops_Cars + CPopCycle::m_NumGangs_Cars + CPopCycle::m_NumDealers_Cars) / v9 > v11) {
+        if (CPopCycle::GetMaxCarsCurrently() / v9 > v11) {
             if (!CGangWars::GangWarFightingGoingOn() && !CPopulation::m_bDontCreateRandomCops) {
                 *arg1 = 13;
                 return static_cast<eModelID>(CCarCtrl::ChoosePoliceCarModel(0));
             }
             return eModelID::MODEL_INVALID;
         }
+
         *arg1  = 0;
         result = static_cast<eModelID>(CTheScripts::ForceRandomCarModel);
         if (static_cast<eModelID>(CTheScripts::ForceRandomCarModel) == eModelID::MODEL_INVALID) {
-            result = CLoadedCarGroup::PickRandomCar(&CPopulation::m_AppropriateLoadedCars, 1, 0);
+            result = CPopulation::m_AppropriateLoadedCars.PickRandomCar(true, false);
         }
     }
     return result;

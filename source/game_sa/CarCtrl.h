@@ -8,6 +8,7 @@
 
 #include "PathFind.h"
 #include "Vector.h"
+#include "eModelID.h"
 
 class CPhysical;
 class CVehicle;
