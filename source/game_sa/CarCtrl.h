@@ -51,7 +51,7 @@ public:
     static void ReInit();
     static int32 ChooseBoatModel();
     static int32 ChooseCarModelToLoad(int32 arg1);
-    static int32 ChooseModel(int32* arg1);
+    static eModelID ChooseModel(int32* arg1);
     static int32 ChoosePoliceCarModel(uint32 arg0);
     static eModelID ChooseGangCarModel(eGangID loadedCarGroupId);
     static void ClearInterestingVehicleList();
